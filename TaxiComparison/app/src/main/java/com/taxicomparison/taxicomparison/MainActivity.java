@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Call;
@@ -34,13 +35,15 @@ public class MainActivity extends AppCompatActivity {
     Spinner city;
     private EditText address1;
     private EditText address2;
-    private TextView txtResult;
+    private ListView listViewResult;
     private ProgressBar progressBar;
+    public static Context context;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        context = getApplicationContext();
         initializeFields();
     }
 
@@ -51,8 +54,8 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Заполните поля", Toast.LENGTH_SHORT).show();
             return;
         }
-        if(!TextUtils.isEmpty(txtResult.getText().toString())){
-            txtResult.setText("");
+        if(!TextUtils.isEmpty(listViewResult.toString())){
+            //listViewResult.setAdapter();
         }
         progressBar.setVisibility(View.VISIBLE);
 
@@ -62,7 +65,7 @@ public class MainActivity extends AppCompatActivity {
         initializeCitiesSpinner();
         address1 = findViewById(R.id.etdTxtAddress1);
         address2 = findViewById(R.id.etdTxtAddress2);
-        txtResult = findViewById(R.id.txtResult);
+        listViewResult = findViewById(R.id.listViewResult);
         progressBar = findViewById(R.id.progressBar);
     }
 
@@ -122,12 +125,16 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
                 if(response.isSuccessful()) {
-                    final String resp =
-                            parseResponse(URLDecoder.decode(response.body().string(), "utf-8"));
+                    final ArrayList<String> resp = parseResponse(URLDecoder.decode(response.body().string(), "utf-8"));
                     MainActivity.this.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
-                            txtResult.setText(resp);
+                            ArrayAdapter<String> resultAdapter = new ArrayAdapter<String>(
+                                    context,
+                                    android.R.layout.simple_list_item_1,
+                                    resp
+                            );
+                            listViewResult.setAdapter(resultAdapter);
                             progressBar.setVisibility(View.GONE);
                         }
                     });
@@ -149,9 +156,10 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
-    private String parseResponse(String response) {
-        response = response.replaceAll(":", " ");
-        return response.replaceAll(";", "\n");
+    private ArrayList<String> parseResponse(String response) {
+        response = response.replaceAll(":", " - ");
+        String[] result = response.split(";");
+        return new ArrayList<String>(Arrays.asList(result));
     }
 
 
