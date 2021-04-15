@@ -56,7 +56,7 @@ public class ServerHttp extends HttpServlet {
         for(int i = 0; i < prices.size(); i++) {
             htmlResponse +=
                     URLEncoder.encode(prices.get(i).getKey()
-                            + " "
+                            + ":"
                             + prices.get(i).getValue()
                             + ";","utf-8");
         }
