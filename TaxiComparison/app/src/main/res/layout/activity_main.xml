@@ -5,39 +5,46 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".MainActivity">
-    <Spinner
-        android:id="@+id/spinnerCities"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="15dp"/>
 
-    <EditText
-        android:id="@+id/etdTxtAddress1"
-        android:layout_width="wrap_content"
+    <SearchView
+        android:id="@+id/searchViewAddressFrom"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:ems="10"
         android:inputType="textPersonName"
-        android:hint="Адрес отправления"
+        android:queryHint="Адрес отправления"
         android:layout_centerHorizontal="true"
-        android:layout_below="@id/spinnerCities"
-        android:layout_marginTop="30dp"/>
+        android:layout_marginTop="30dp"
+        android:iconifiedByDefault="false"/>
 
-    <EditText
-        android:id="@+id/etdTxtAddress2"
+    <ListView
+        android:id="@+id/listViewResFrom"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:ems="10"
+        android:layout_below="@id/searchViewAddressFrom"
+        android:layout_centerHorizontal="true" />
+
+    <SearchView
+        android:id="@+id/searchViewAddressTo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:inputType="textPersonName"
-        android:hint="Адрес назначения"
+        android:queryHint="Адрес назначения"
         android:layout_centerHorizontal="true"
-        android:layout_below="@id/etdTxtAddress1"
-        android:layout_marginTop="30dp"/>
+        android:layout_below="@id/searchViewAddressFrom"
+        android:layout_marginTop="30dp"
+        android:iconifiedByDefault="false"/>
+
+    <ListView
+        android:id="@+id/listViewResTo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/searchViewAddressTo"
+        android:layout_centerHorizontal="true" />
     <Button
         android:id="@+id/btnGetResult"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/etdTxtAddress2"
+        android:layout_below="@id/searchViewAddressTo"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="50dp"
         android:text="Получить цены"
@@ -58,7 +65,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/btnGetResult"
         android:layout_centerHorizontal="true"
-        android:layout_marginTop="200dp"/>
+        android:layout_marginTop="50dp"/>
 
 
 </RelativeLayout>
