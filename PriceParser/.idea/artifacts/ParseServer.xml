@@ -1,0 +1,17 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="ParseServer">
+    <output-path>$PROJECT_DIR$/out/artifacts/ParseServer</output-path>
+    <root id="root">
+      <element id="javaee-facet-resources" facet="PriceParser/web/Web" />
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="PriceParser" />
+        </element>
+        <element id="directory" name="lib">
+          <element id="library" level="project" name="org.seleniumhq.selenium:selenium-java:3.141.59" />
+          <element id="library" level="project" name="javax.servlet:javax.servlet-api:4.0.1" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>
