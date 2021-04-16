@@ -1,11 +1,18 @@
 package com.taxicomparison.taxicomparison;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.location.Geocoder;
 import android.location.Address;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -22,12 +29,20 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.api.model.RectangularBounds;
 import com.google.android.libraries.places.api.model.TypeFilter;
 import com.google.android.libraries.places.api.net.PlacesClient;
+import com.google.android.libraries.places.widget.Autocomplete;
+import com.google.android.libraries.places.widget.AutocompleteActivity;
 import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
 import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
+import com.google.android.libraries.places.widget.model.AutocompleteActivityMode;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -48,11 +63,15 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
+    private FusedLocationProviderClient fusedLocationClient;
+    private Location curLocation;
+    private EditText edtTxtDestAddress;
+    private EditText edtTxtDepAddress;
     private ListView listViewResult;
     private ProgressBar progressBar;
-    private  static Context context;
-    Place depAddress;
-    Place destAddress;
+    private static Context context;
+    private Place depAddress;
+    private Place destAddress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,7 +79,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         context = getApplicationContext();
         initializeFields();
-
+        initializeLocation();
     }
 
     private void initializeFields() {
@@ -72,51 +91,73 @@ public class MainActivity extends AppCompatActivity {
 
     private void initializeDepartureAddress() {
         Places.initialize(context, "AIzaSyDq6GUrEFzocsgbecJWTOpecf7tJcycNCo", new Locale("RU"));
-        PlacesClient placesClient = Places.createClient(this);
-        AutocompleteSupportFragment fragDepAddress = (AutocompleteSupportFragment)
-                getSupportFragmentManager().findFragmentById(R.id.departureAddress);
+        edtTxtDepAddress = findViewById(R.id.departureAddress);
+        edtTxtDepAddress.setFocusable(false);
 
-        fragDepAddress.setTypeFilter(TypeFilter.ADDRESS);
-        fragDepAddress.setCountries("Ru");
-        fragDepAddress.setPlaceFields(Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG));
-        fragDepAddress.setHint("Откуда");
-        fragDepAddress.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+        edtTxtDepAddress.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onPlaceSelected(@NonNull Place place) {
-                depAddress = place;
-                fragDepAddress.setText(getAddressFromPlace(depAddress));
-            }
-
-            @Override
-            public void onError(@NonNull Status status) {
-
+            public void onClick(View v) {
+                List<Place.Field> fieldList = Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG);
+                Intent intent =
+                        new Autocomplete.IntentBuilder((AutocompleteActivityMode.FULLSCREEN), fieldList)
+                                .setCountries(Arrays.asList("RU"))
+                                .build(context);
+                startActivityForResult(intent, 100);
             }
         });
     }
 
     private void initializeDestinationAddress() {
-        AutocompleteSupportFragment fragDestAddress = (AutocompleteSupportFragment)
-                getSupportFragmentManager().findFragmentById(R.id.destinationAddress);
+        edtTxtDestAddress = findViewById(R.id.destinationAddress);
+        edtTxtDestAddress.setFocusable(false);
 
-        fragDestAddress.setTypeFilter(TypeFilter.ADDRESS);
-        fragDestAddress.setCountries("Ru");
-        fragDestAddress.setPlaceFields(Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG));
-        fragDestAddress.setHint("Куда");
-        fragDestAddress.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+        edtTxtDestAddress.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onPlaceSelected(@NonNull Place place) {
-                destAddress = place;
-                fragDestAddress.setText(getAddressFromPlace(destAddress));
-                clearResultListView();
-                progressBar.setVisibility(View.VISIBLE);
-                makeHttpRequest();
-            }
-
-            @Override
-            public void onError(@NonNull Status status) {
-
+            public void onClick(View v) {
+                List<Place.Field> fieldList = Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG);
+                Intent intent =
+                        new Autocomplete.IntentBuilder((AutocompleteActivityMode.FULLSCREEN), fieldList)
+                                .setCountries(Arrays.asList("RU"))
+                                //.setLocationBias(RectangularBounds.newInstance(
+                                //        new LatLng(curLocation.getLatitude() - 1,
+                                //                curLocation.getLongitude() - 1),
+                                //        new LatLng(curLocation.getLatitude() + 1,
+                                //                curLocation.getLongitude() + 1)))
+                                .build(context);
+                startActivityForResult(intent, 101);
             }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 100) {
+            if (resultCode == RESULT_OK) {
+                depAddress = Autocomplete.getPlaceFromIntent(data);
+                edtTxtDepAddress.setText(getAddressFromPlace(depAddress));
+                if (destAddress != null) {
+                    clearResultListView();
+                    progressBar.setVisibility(View.VISIBLE);
+                    makeHttpRequest();
+                }
+            } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
+                Toast.makeText(context, "Произошла ошибка, попробуйте снова", Toast.LENGTH_SHORT).show();
+            }
+        }
+        if (requestCode == 101) {
+            if (resultCode == RESULT_OK) {
+                destAddress = Autocomplete.getPlaceFromIntent(data);
+                edtTxtDestAddress.setText(getAddressFromPlace(destAddress));
+                if (depAddress != null) {
+                    clearResultListView();
+                    progressBar.setVisibility(View.VISIBLE);
+                    makeHttpRequest();
+                }
+            } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
+                Toast.makeText(context, "Произошла ошибка, попробуйте снова", Toast.LENGTH_SHORT).show();
+            }
+        }
     }
 
     private void makeHttpRequest() {
@@ -142,14 +183,14 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException {
-                if(response.isSuccessful()) {
+                if (response.isSuccessful()) {
                     final ArrayList<String> resp = parseResponse(URLDecoder.decode(response.body().string(), "utf-8"));
                     MainActivity.this.runOnUiThread(new Runnable() {
                         @Override
                         public void run() {
                             ArrayAdapter<String> resultAdapter = new ArrayAdapter<String>(
                                     context,
-                                    android.R.layout.simple_list_item_1,
+                                    R.layout.text_view_layout,
                                     resp
                             );
                             listViewResult.setAdapter(resultAdapter);
@@ -168,9 +209,9 @@ public class MainActivity extends AppCompatActivity {
         System.out.println(getAddressFromPlace(destAddress));
         try {
             result = "https://20210415t110208-dot-taxiapi-310121.oa.r.appspot.com/"
-                    + "?city=" + URLEncoder.encode(getCityFromPlace(depAddress),"utf-8")
-                    + "?addres1=" + URLEncoder.encode(getAddressFromPlace(depAddress),"utf-8")
-                    +  "?address2=" + URLEncoder.encode(getAddressFromPlace(destAddress),"utf-8");
+                    + "?city=" + URLEncoder.encode(getCityFromPlace(depAddress), "utf-8")
+                    + "?addres1=" + URLEncoder.encode(getAddressFromPlace(depAddress), "utf-8")
+                    + "?address2=" + URLEncoder.encode(getAddressFromPlace(destAddress), "utf-8");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
@@ -185,7 +226,7 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void clearResultListView() {
-        if(listViewResult.getCount() != 0) {
+        if (listViewResult.getCount() != 0) {
             listViewResult.setAdapter(null);
         }
     }
@@ -195,7 +236,7 @@ public class MainActivity extends AppCompatActivity {
         Geocoder gcd = new Geocoder(context, new Locale("RU"));
         try {
             List<Address> addresses = gcd.getFromLocation(place.getLatLng().latitude,
-                            place.getLatLng().longitude, 1);
+                    place.getLatLng().longitude, 1);
             if (addresses.size() != 0) {
                 result = addresses.get(0).getLocality();
             }
@@ -218,5 +259,21 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
         return result;
+    }
+
+    private void initializeLocation() {
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        fusedLocationClient.getLastLocation()
+                .addOnSuccessListener(this, new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        if (location != null) {
+                            curLocation = location;
+                        }
+                    }
+                });
     }
 }
