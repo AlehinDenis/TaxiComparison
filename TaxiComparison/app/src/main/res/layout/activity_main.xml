@@ -6,55 +6,25 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <SearchView
-        android:id="@+id/searchViewAddressFrom"
+    <fragment android:id="@+id/departureAddress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="textPersonName"
-        android:queryHint="Адрес отправления"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="30dp"
-        android:iconifiedByDefault="false"/>
+        android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"/>
 
-    <ListView
-        android:id="@+id/listViewResFrom"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/searchViewAddressFrom"
-        android:layout_centerHorizontal="true" />
-
-    <SearchView
-        android:id="@+id/searchViewAddressTo"
+    <fragment android:id="@+id/destinationAddress"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="textPersonName"
-        android:queryHint="Адрес назначения"
+        android:name="com.google.android.libraries.places.widget.AutocompleteSupportFragment"
+        android:layout_below="@id/departureAddress"
         android:layout_centerHorizontal="true"
-        android:layout_below="@id/searchViewAddressFrom"
-        android:layout_marginTop="30dp"
-        android:iconifiedByDefault="false"/>
+        android:layout_marginTop="25dp"/>
 
-    <ListView
-        android:id="@+id/listViewResTo"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/searchViewAddressTo"
-        android:layout_centerHorizontal="true" />
-    <Button
-        android:id="@+id/btnGetResult"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@id/searchViewAddressTo"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="50dp"
-        android:text="Получить цены"
-        android:onClick="onBtnGetResult"/>
 
     <ProgressBar
         android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/btnGetResult"
+        android:layout_below="@id/destinationAddress"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="200dp"
         android:visibility="gone"/>
@@ -63,7 +33,7 @@
         android:id="@+id/listViewResult"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@id/btnGetResult"
+        android:layout_below="@id/destinationAddress"
         android:layout_centerHorizontal="true"
         android:layout_marginTop="50dp"/>
 
