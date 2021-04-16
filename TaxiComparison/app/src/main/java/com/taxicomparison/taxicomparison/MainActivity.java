@@ -204,9 +204,6 @@ public class MainActivity extends AppCompatActivity {
 
     private String buildRequestUrl() {
         String result = "";
-        System.out.println(getCityFromPlace(depAddress));
-        System.out.println(getAddressFromPlace(depAddress));
-        System.out.println(getAddressFromPlace(destAddress));
         try {
             result = "https://20210415t110208-dot-taxiapi-310121.oa.r.appspot.com/"
                     + "?city=" + URLEncoder.encode(getCityFromPlace(depAddress), "utf-8")
@@ -232,32 +229,42 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private String getCityFromPlace(Place place) {
-        String result = "";
-        Geocoder gcd = new Geocoder(context, new Locale("RU"));
-        try {
-            List<Address> addresses = gcd.getFromLocation(place.getLatLng().latitude,
-                    place.getLatLng().longitude, 1);
-            if (addresses.size() != 0) {
-                result = addresses.get(0).getLocality();
+        String result = place.getAddress();
+        int commaCounter = 0;
+        int startIndex = 0;
+        int endIndex = 0;
+        for(int i = result.length() - 1; i >= 0; i--) {
+            if(result.charAt(i) == ',') {
+                commaCounter++;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            if(commaCounter == 3 && endIndex == 0) {
+                endIndex = i;
+            }
+            if(commaCounter == 4) {
+                startIndex = i;
+                break;
+            }
         }
+
+        result = result.substring(startIndex + 2, endIndex);
         return result;
     }
 
     private String getAddressFromPlace(Place place) {
-        String result = "";
-        Geocoder gcd = new Geocoder(context, new Locale("RU"));
-        try {
-            List<Address> addresses = gcd.getFromLocation(place.getLatLng().latitude,
-                    place.getLatLng().longitude, 1);
-            if (addresses.size() != 0) {
-                result = addresses.get(0).getThoroughfare() + " " + addresses.get(0).getSubThoroughfare();
+        String result = place.getAddress();
+        int commaCounter = 0;
+        int endIndex = 0;
+        for(int i = result.length() - 1; i >= 0; i--) {
+            if(result.charAt(i) == ',') {
+                commaCounter++;
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+            if(commaCounter == 4) {
+                endIndex = i;
+                break;
+            }
         }
+
+        result = result.substring(0, endIndex);
         return result;
     }
 

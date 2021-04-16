@@ -1,20 +1,15 @@
 package main.java.PriceParser;
 
 import org.openqa.selenium.*;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.remote.DesiredCapabilities;
 import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
-import org.openqa.selenium.net.PortProber;
 
 
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 import static org.openqa.selenium.support.ui.ExpectedConditions.presenceOfElementLocated;
 
@@ -25,9 +20,9 @@ public class PriceParser {
     private WebDriver browser;
     private WebDriverWait wait;
 
-    public PriceParser(String city, String streetFrom, String streetTo) {
-        this.addressFrom = city + " " + streetFrom;
-        this.addressTo = city + " " + streetTo;
+    public PriceParser(String addressFrom, String addressTo) {
+        this.addressFrom = addressFrom;
+        this.addressTo = addressTo;
     }
 
     public List<Pair<String, String>> run(int timeOut) {
@@ -41,10 +36,6 @@ public class PriceParser {
 
 
     private void setUpEnvironment() {
-        /*System.setProperty("webdriver.chrome.driver", "chromedriver.exe");
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless");
-        options.addArguments("--no-sandbox");*/
         DesiredCapabilities capabilities = new DesiredCapabilities();
         capabilities.setBrowserName("chrome");
         capabilities.setVersion("80.0");
@@ -59,8 +50,6 @@ public class PriceParser {
             e.printStackTrace();
         }
         browser.get("https://taxinf.ru/");
-        //browser.navigate().to("https://taxinf.ru/");
-        //browser.manage().window().maximize();
         wait = new WebDriverWait(browser, 30);
     }
 

@@ -1,21 +1,16 @@
 package main.java.Http;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-
 import java.io.IOException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.io.*;
 import java.util.List;
-import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import main.java.PriceParser.*;
-import org.openqa.selenium.net.PortProber;
 
 @WebServlet()
 public class ServerHttp extends HttpServlet {
@@ -32,13 +27,12 @@ public class ServerHttp extends HttpServlet {
     private ArrayList<String> handleGetRequest(HttpServletRequest req) {
         String[] values = req.getQueryString().toString().split("\\?|=");
         ArrayList<String> result = new ArrayList<>();
-        for(int i =0;i < values.length;i++) {
+        for(int i = 0; i < values.length; i++) {
             System.out.println(values[i]);
         }
             try {
                 result.add(URLDecoder.decode(values[1],"utf8"));
                 result.add(URLDecoder.decode(values[3],"utf8"));
-                result.add(URLDecoder.decode(values[5],"utf8"));
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
             }
@@ -49,8 +43,7 @@ public class ServerHttp extends HttpServlet {
     private void handleResponse(HttpServletResponse resp, ArrayList<String> requestParamValue)  throws  IOException {
         PriceParser priceParser = new PriceParser(
                 requestParamValue.get(0),
-                requestParamValue.get(1),
-                requestParamValue.get(2));
+                requestParamValue.get(1));
         List<Pair<String, String>> prices = priceParser.run(100);
         String htmlResponse = "";
         for(int i = 0; i < prices.size(); i++) {
