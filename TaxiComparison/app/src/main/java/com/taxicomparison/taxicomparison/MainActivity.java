@@ -20,7 +20,9 @@ import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.SearchView;
@@ -32,7 +34,9 @@ import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 import com.google.android.libraries.places.api.Places;
 import com.google.android.libraries.places.api.model.Place;
 import com.google.android.libraries.places.api.model.RectangularBounds;
@@ -63,30 +67,37 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity {
-    private FusedLocationProviderClient fusedLocationClient;
-    private Location curLocation;
+    private FusedLocationProviderClient fusedLocationProviderClient;
+    private Place curPlace;
     private EditText edtTxtDestAddress;
     private EditText edtTxtDepAddress;
     private ListView listViewResult;
     private ProgressBar progressBar;
+    private ImageButton btnSetDepLocation;
+    private ImageButton btnSetDestLocation;
     private static Context context;
     private Place depAddress;
     private Place destAddress;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         context = getApplicationContext();
-        initializeFields();
-        initializeLocation();
+        assignFields();
+        checkLocationPermission();
+
     }
 
-    private void initializeFields() {
+    private void assignFields() {
         listViewResult = findViewById(R.id.listViewResult);
         progressBar = findViewById(R.id.progressBar);
+        btnSetDepLocation = findViewById(R.id.btnSetDepLocation);
+        btnSetDestLocation = findViewById(R.id.btnSetDestLocation);
         initializeDepartureAddress();
         initializeDestinationAddress();
+        createBtnListener();
     }
 
     private void initializeDepartureAddress() {
@@ -97,11 +108,12 @@ public class MainActivity extends AppCompatActivity {
         edtTxtDepAddress.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                List<Place.Field> fieldList = Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG);
-                Intent intent =
-                        new Autocomplete.IntentBuilder((AutocompleteActivityMode.FULLSCREEN), fieldList)
-                                .setCountries(Arrays.asList("RU"))
-                                .build(context);
+                Intent intent;
+                if(curPlace != null) {
+                    intent = buildIntentWithLocation();
+                } else {
+                    intent = buildIntent();
+                }
                 startActivityForResult(intent, 100);
             }
         });
@@ -114,16 +126,12 @@ public class MainActivity extends AppCompatActivity {
         edtTxtDestAddress.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                List<Place.Field> fieldList = Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG);
-                Intent intent =
-                        new Autocomplete.IntentBuilder((AutocompleteActivityMode.FULLSCREEN), fieldList)
-                                .setCountries(Arrays.asList("RU"))
-                                //.setLocationBias(RectangularBounds.newInstance(
-                                //        new LatLng(curLocation.getLatitude() - 1,
-                                //                curLocation.getLongitude() - 1),
-                                //        new LatLng(curLocation.getLatitude() + 1,
-                                //                curLocation.getLongitude() + 1)))
-                                .build(context);
+                Intent intent;
+                if(curPlace != null) {
+                    intent = buildIntentWithLocation();
+                } else {
+                    intent = buildIntent();
+                }
                 startActivityForResult(intent, 101);
             }
         });
@@ -143,6 +151,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
                 Toast.makeText(context, "Произошла ошибка, попробуйте снова", Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.GONE);
             }
         }
         if (requestCode == 101) {
@@ -156,6 +165,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             } else if (resultCode == AutocompleteActivity.RESULT_ERROR) {
                 Toast.makeText(context, "Произошла ошибка, попробуйте снова", Toast.LENGTH_SHORT).show();
+                progressBar.setVisibility(View.GONE);
             }
         }
     }
@@ -205,13 +215,13 @@ public class MainActivity extends AppCompatActivity {
     private String buildRequestUrl() {
         String result = "";
         try {
-            result = "https://20210415t110208-dot-taxiapi-310121.oa.r.appspot.com/"
-                    + "?city=" + URLEncoder.encode(getCityFromPlace(depAddress), "utf-8")
-                    + "?addres1=" + URLEncoder.encode(getAddressFromPlace(depAddress), "utf-8")
-                    + "?address2=" + URLEncoder.encode(getAddressFromPlace(destAddress), "utf-8");
+            result = "https://20210416t191302-dot-taxiapi-310121.oa.r.appspot.com/"
+                    + "?depAddress=" + URLEncoder.encode(getAddressFromPlace(depAddress), "utf-8")
+                    + "?destAddress=" + URLEncoder.encode(getAddressFromPlace(destAddress), "utf-8");
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }
+        System.out.println(result);
         return result;
     }
 
@@ -228,37 +238,25 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private String getCityFromPlace(Place place) {
+    private String getAddressFromPlace(Place place) {
         String result = place.getAddress();
-        int commaCounter = 0;
-        int startIndex = 0;
-        int endIndex = 0;
-        for(int i = result.length() - 1; i >= 0; i--) {
-            if(result.charAt(i) == ',') {
-                commaCounter++;
-            }
-            if(commaCounter == 3 && endIndex == 0) {
-                endIndex = i;
-            }
-            if(commaCounter == 4) {
-                startIndex = i;
-                break;
+        int commaCounter = 0,
+                endIndex = 0,
+                countOfCommas = 0;
+        for (int i = result.length() - 1; i >= 0; i--) {
+            if (result.charAt(i) == ',') {
+                countOfCommas++;
             }
         }
 
-        result = result.substring(startIndex + 2, endIndex);
-        return result;
-    }
-
-    private String getAddressFromPlace(Place place) {
-        String result = place.getAddress();
-        int commaCounter = 0;
-        int endIndex = 0;
-        for(int i = result.length() - 1; i >= 0; i--) {
-            if(result.charAt(i) == ',') {
+        for (int i = result.length() - 1; i >= 0; i--) {
+            if (result.charAt(i) == ',') {
                 commaCounter++;
             }
-            if(commaCounter == 4) {
+            if (countOfCommas == 3 && commaCounter == 2) {
+                endIndex = i;
+                break;
+            } else if(commaCounter == 3) {
                 endIndex = i;
                 break;
             }
@@ -268,19 +266,83 @@ public class MainActivity extends AppCompatActivity {
         return result;
     }
 
-    private void initializeLocation() {
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+    private void checkLocationPermission() {
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
         }
-        fusedLocationClient.getLastLocation()
-                .addOnSuccessListener(this, new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        if (location != null) {
-                            curLocation = location;
+        getLocation();
+    }
+
+    private void getLocation() {
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(MainActivity.this,
+                    new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 44);
+        }
+        fusedLocationProviderClient.getLastLocation().addOnCompleteListener(new OnCompleteListener<Location>() {
+            @Override
+            public void onComplete(@NonNull Task<Location> task) {
+                Location location = task.getResult();
+                if(location != null) {
+                    Geocoder geocoder = new Geocoder(MainActivity.this,
+                            new Locale("RU"));
+                    try {
+                        List<Address> addresses =
+                                geocoder.getFromLocation(location.getLatitude(),
+                                        location.getLongitude(), 1);
+                        if(addresses != null) {
+                            curPlace = Place.builder()
+                                    .setAddress(addresses.get(0).getAddressLine(0))
+                                    .setLatLng(new LatLng(location.getLatitude(), location.getLongitude()))
+                                    .build();
                         }
+
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                });
+                }
+            }
+        });
+    }
+
+    private Intent buildIntentWithLocation() {
+        List<Place.Field> fieldList = Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG);
+        return new Autocomplete.IntentBuilder((AutocompleteActivityMode.FULLSCREEN), fieldList)
+                        .setCountries(Arrays.asList("RU"))
+                        .setLocationBias(RectangularBounds.newInstance(
+                                new LatLng(curPlace.getLatLng().latitude - 1,
+                                        curPlace.getLatLng().longitude - 1),
+                                new LatLng(curPlace.getLatLng().latitude + 1,
+                                        curPlace.getLatLng().longitude + 1)))
+                        .build(context);
+    }
+
+    private Intent buildIntent() {
+        List<Place.Field> fieldList = Arrays.asList(Place.Field.ADDRESS, Place.Field.LAT_LNG);
+        return new Autocomplete.IntentBuilder((AutocompleteActivityMode.FULLSCREEN), fieldList)
+                .setCountries(Arrays.asList("RU"))
+                .build(context);
+    }
+
+    private void createBtnListener() {
+        btnSetDepLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(curPlace != null) {
+                    edtTxtDepAddress.setText(getAddressFromPlace(curPlace));
+                    depAddress = curPlace;
+                }
+            }
+        });
+        btnSetDestLocation.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(curPlace != null) {
+                    edtTxtDestAddress.setText(getAddressFromPlace(curPlace));
+                    destAddress = curPlace;
+                }
+            }
+        });
     }
 }
